@@ -18,6 +18,11 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+    add_definitions(-DWITH_DEBUG)
+endif()
+
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 find_package(Threads REQUIRED)
 

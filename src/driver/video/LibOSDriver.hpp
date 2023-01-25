@@ -10,7 +10,9 @@
 #include "../../istd/Stm.hpp"
 #include "VideoDriver.hpp"
 #include <libos/Window.h>
-namespace openttd::drivers
+namespace openttd
+{
+namespace drivers
 {
 class LibOSBaseWindowDriver : public IVideoDriver
 {
@@ -45,3 +47,4 @@ class LibOSBaseWindowDriver : public IVideoDriver
     }
 };
 } // namespace drivers
+} // namespace openttd
