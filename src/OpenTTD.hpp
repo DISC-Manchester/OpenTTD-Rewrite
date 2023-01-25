@@ -1,20 +1,26 @@
 ﻿#pragma once
-#include "driver/Video/VideoDriver.hpp"
+#include "driver/video/VideoDriver.hpp"
 namespace openttd
 {
-	class OpenTTD
-	{
-		drivers::VideoDriver* video;
+class OpenTTD
+{
+    drivers::VideoDriver *video;
 
-	public:
-		OpenTTD()
-		{
-			video = new drivers::VideoDriver();
-		}
+  public:
+    OpenTTD()
+    {
+        video = new drivers::VideoDriver();
+    }
 
-		void run()
-		{
-			while (true);
-		}
-	};
-}
+    void run()
+    {
+        bool running = true;
+        while (running)
+        {
+            if (drivers::DBus::get()->retrieve(drivers::DBusEventData::DBusEvent::CLOSED_WINDOW).event !=
+                drivers::DBusEventData::DBusEvent::NO_EVENT)
+                running = false;
+        }
+    }
+};
+} // namespace openttd

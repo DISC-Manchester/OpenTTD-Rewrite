@@ -13,6 +13,7 @@
 // Copyright Luke Shore (c) 2020, 2023
 /*! Importation of libraries*/
 #include <atomic>
+#include <cstddef>
 #include <stdint.h>
 typedef float float32_t;  //!< this data type is used to represent a 32bit floating point number
 typedef double float64_t; //!< this data type is used to represent a 64bit floating point number
@@ -21,7 +22,7 @@ typedef size_t data_size_t;   //!< this data type is used to represent size of s
 #ifdef  WIN32
 typedef signed long long int sdata_size_t; //!< this data type is used to represent size of some data signed version
 #else
-typedef ssize_t sdata_size_t; //!< this data type is used to represent size of some data signed version
+typedef signed long sdata_size_t; //!< this data type is used to represent size of some data signed version
 #endif
 
 typedef std::atomic<float32_t> float32_ts; //!< this is men't do be a thread save version of the float32_t

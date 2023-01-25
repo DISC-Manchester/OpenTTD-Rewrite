@@ -9,5 +9,8 @@
 #include <tuple>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <thread>
+#include <queue>
+#include <mutex>
 typedef uint16_t unicode;
