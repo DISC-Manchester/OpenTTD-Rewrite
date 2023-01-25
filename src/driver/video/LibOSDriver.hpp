@@ -29,9 +29,20 @@ class LibOSBaseWindowDriver : public IVideoDriver
     {
         losResult result{};
         losWindowInfo info;
-        info.title = "test";
-        info.title_size = 4;
-        info.window_size = {500, 500};
+        std::string title;
+        if (tested)
+            title = "openttd-rewrite";
+        else
+        {
+            title = "testing -";
+            title += getName();
+        }
+        info.title = title.c_str();
+        info.title_size = title.size();
+        if (tested)
+            info.window_size = {500, 500};
+        else
+            info.window_size = {400, 1};
         if ((result = losCreateWindow(&window, info)) != LOS_SUCCESS)
             return "Error creating window";
         return nullptr;

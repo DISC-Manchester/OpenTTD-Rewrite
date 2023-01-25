@@ -1,12 +1,10 @@
 #include <Windows.h>
 #include "../../OpenTTD.hpp"
-
-
-
-INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-    PSTR lpCmdLine, INT nCmdShow)
+#if WITH_DEBUG
+int main()
+#else
+INT CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+#endif
 {
-    openttd::OpenTTD openTTD;
-    openTTD.run();
-    return 0;
+    return openttd::gameMain();
 }

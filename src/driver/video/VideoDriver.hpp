@@ -32,7 +32,7 @@ class IVideoDriver : public IDriver
 
 class VideoDriver
 {
-    std::thread *driver_thread;
+    std::thread *driver_thread{nullptr};
   public:
     VideoDriver();
     ~VideoDriver();

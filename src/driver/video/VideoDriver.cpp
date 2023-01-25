@@ -19,7 +19,7 @@ VideoDriver::VideoDriver()
         puts("No Drivers registered");
     }
 
-    IVideoDriver * last_highest = nullptr;;
+    IVideoDriver * last_highest = nullptr;
     for (auto *driver_ref : DriverRegistry::get()->getRef())
     {
         if (driver_ref->getType() == DriverType::VIDEO)

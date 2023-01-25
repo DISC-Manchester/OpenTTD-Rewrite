@@ -2,25 +2,22 @@
 #include "driver/video/VideoDriver.hpp"
 namespace openttd
 {
-class OpenTTD
+int gameMain()
 {
-    drivers::VideoDriver *video;
-
-  public:
-    OpenTTD()
+    drivers::VideoDriver video{};
+    (void)drivers::DriverRegistry::get(true);
+    bool running = true;
+    while (running)
     {
-        video = new drivers::VideoDriver();
-    }
-
-    void run()
-    {
-        bool running = true;
-        while (running)
+        if (eventToHandle(drivers::DBusEventData::DBusEvent::CLOSED_WINDOW))
         {
-            if (drivers::DBus::get()->retrieve(drivers::DBusEventData::DBusEvent::CLOSED_WINDOW).event !=
-                drivers::DBusEventData::DBusEvent::NO_EVENT)
-                running = false;
+            running = false;
+        }
+        if (eventToHandle(drivers::DBusEventData::DBusEvent::STATE_CHANGE))
+        {
+            submitEvent(newEvent(drivers::DBusEventData::DBusEvent::DRAW_NEW_FRAME));
         }
     }
-};
+    return 0;
+}
 } // namespace openttd

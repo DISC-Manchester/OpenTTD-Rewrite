@@ -12,13 +12,13 @@ namespace openttd
 {
 namespace drivers
 {
-enum class DriverType
+typedef enum DriverType : uint8_t
 {
     VIDEO,
     SOUND,
     NETWORK,
     FILE
-};
+} DriverType;
 
 class IDriver
 {
@@ -59,9 +59,14 @@ class DriverRegistry
     DriverRegistry() = default;
     ~DriverRegistry() = default;
 
-    static DriverRegistry *get()
+    static DriverRegistry *get(bool done = false)
     {
         static DriverRegistry *reg;
+        if (done)
+        {
+            delete reg;
+            return nullptr;
+        }
         if (!reg)
             reg = new DriverRegistry();
         return reg;
@@ -85,13 +90,29 @@ struct DBusEventData
         NO_EVENT,
         CLOSED_WINDOW,
         ON_KEY_DOWN,
-        ON_MOUSE_BUTTON_DOWN,
+        ON_MOUSE_DOWN,
+        STATE_CHANGE,
+        DRAW_NEW_FRAME,
     } event;
-    void *data;
+    std::shared_ptr<void *> data;
     DBusEventData()
     {
         event = DBusEvent::NO_EVENT;
         data = nullptr;
+    }
+
+    DBusEventData(DBusEvent event_in, void *data_in)
+        : event(event_in)
+        , data(std::make_shared<void *>(data_in))
+    {
+    }
+
+    DBusEventData copy()
+    {
+        DBusEventData return_data;
+        return_data.event = this->event;
+        return_data.data = this->data;
+        return return_data;
     }
 };
 
@@ -129,7 +150,7 @@ class DBus
         if (!bus.empty())
         {
             std::lock_guard<std::mutex> lock(bus_lock);
-            auto top = bus.front();
+            auto top = bus.front().copy();
             if (top.event == filter || filter == DBusEventData::DBusEvent::NO_EVENT)
             {
                 bus.pop();
@@ -140,5 +161,11 @@ class DBus
         return {};
     }
 };
+#define newEventWithData(event, data_ptr) openttd::drivers::DBusEventData(event, data_ptr)
+#define newEvent(event) newEventWithData(event, nullptr)
+#define getEventToHandle(filter) openttd::drivers::DBus::get()->retrieve(filter)
+#define eventToHandle(filter) getEventToHandle(filter).event != openttd::drivers::DBusEventData::DBusEvent::NO_EVENT
+#define reSubmitEvent(event) openttd::drivers::DBus::get()->submit(event)
+#define submitEvent(event) openttd::drivers::DBus::get()->submit(event)
 } // namespace drivers
 } // namespace openttd
