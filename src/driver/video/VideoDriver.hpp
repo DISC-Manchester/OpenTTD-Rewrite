@@ -16,6 +16,7 @@ namespace drivers
 class IVideoDriver : public IDriver
 {
     uint8_t priority = 0;
+    std::chrono::system_clock::time_point last_time = std::chrono::system_clock::now();
 
   public:
     IVideoDriver(uint8_t priority_in);
@@ -33,6 +34,7 @@ class IVideoDriver : public IDriver
 class VideoDriver
 {
     std::thread *driver_thread{nullptr};
+
   public:
     VideoDriver();
     ~VideoDriver();

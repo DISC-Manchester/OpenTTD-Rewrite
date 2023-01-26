@@ -12,6 +12,7 @@
 //-- don't flip
 #    include <vulkan/vulkan_xcb.h>
 #endif // DEBUG
+#include "../../render/Vulkan.hpp"
 
 namespace openttd::drivers
 {
@@ -130,12 +131,12 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
         const std::vector<const char *> validation_layers = {"VK_LAYER_KHRONOS_validation"};
         const std::vector<const char *> instance_enable_extendions = {
             VK_KHR_SURFACE_EXTENSION_NAME,
-#    if __has_include(<wayland-client.h>)
+#if __has_include(<wayland-client.h>)
             VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-#    endif
-#    if __has_include(<xcb/xcb.h>)
+#endif
+#if __has_include(<xcb/xcb.h>)
             VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-#    endif
+#endif
         };
 
         VkInstanceCreateInfo inst_info{};
@@ -196,7 +197,7 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
         {
         case WIN32_API:
             throw new std::runtime_error("Vulkan wsi is not implemented on Windows");
-#    if __has_include(<wayland-client.h>)
+#if __has_include(<wayland-client.h>)
         case WAYLAND_API: {
             losWindowWayland *native_link = (losWindowWayland *)losGetWindowNativePointer(window);
             VkWaylandSurfaceCreateInfoKHR surface_info{};
@@ -208,8 +209,8 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
                 puts("Vulkan Created Wayland surface WSI");
             break;
         }
-#    endif
-#    if __has_include(<xcb/xcb.h>)
+#endif
+#if __has_include(<xcb/xcb.h>)
         case XCB_API: {
             losWindowXCB *native_link = (losWindowXCB *)losGetWindowNativePointer(window);
             VkXcbSurfaceCreateInfoKHR surface_info{};
@@ -221,24 +222,37 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
                 puts("Vulkan Created Wayland surface WSI");
             break;
         }
-#    endif
+#endif
         }
+        if (tested)
+            openttd::render::Renderer::get()->use(new openttd::render::VulkanRenderer(instance, device, surface));
         return nullptr;
     }
 
     void mainLoop() final override
     {
+        using namespace std::chrono;
+        using namespace std::literals;
         while (losUpdateWindow(window) != LOS_WINDOW_CLOSE)
-            ;
-
-        DBusEventData data;
-        data.event = DBusEventData::DBusEvent::CLOSED_WINDOW;
-        data.data = nullptr;
-        DBus::get()->submit(data);
+        {
+            system_clock::time_point start_time = system_clock::now();
+            if (eventToHandle(drivers::DBusEventData::DBusEvent::PRESENT_FRAME))
+                openttd::render::Renderer::get()->present();
+            system_clock::time_point end_time = system_clock::now();
+            std::this_thread::sleep_for((end_time - start_time) - 16.5ms);
+        }
+        dumpBus();
+        submitEvent(newEvent(DBusEventData::DBusEvent::CLOSED_WINDOW));
+        lockBus();
     }
 
     void stop() override
     {
+        if (tested)
+        {
+            openttd::render::Renderer::get()->use(nullptr);
+            (void)openttd::render::Renderer::get(true);
+        }
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);

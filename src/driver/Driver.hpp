@@ -15,9 +15,7 @@ namespace drivers
 typedef enum DriverType : uint8_t
 {
     VIDEO,
-    SOUND,
-    NETWORK,
-    FILE
+    SOUND
 } DriverType;
 
 class IDriver
@@ -91,8 +89,8 @@ struct DBusEventData
         CLOSED_WINDOW,
         ON_KEY_DOWN,
         ON_MOUSE_DOWN,
-        STATE_CHANGE,
-        DRAW_NEW_FRAME,
+        FINISHED_DRAW,
+        PRESENT_FRAME,
     } event;
     std::shared_ptr<void *> data;
     DBusEventData()
@@ -106,20 +104,13 @@ struct DBusEventData
         , data(std::make_shared<void *>(data_in))
     {
     }
-
-    DBusEventData copy()
-    {
-        DBusEventData return_data;
-        return_data.event = this->event;
-        return_data.data = this->data;
-        return return_data;
-    }
 };
 
 class DBus
 {
     std::queue<DBusEventData> bus;
     std::mutex bus_lock;
+    std::atomic_bool is_lock = false;
 
   public:
     DBus() = default;
@@ -133,16 +124,31 @@ class DBus
         return dbus;
     }
 
+    void lockSubmit()
+    {
+        std::lock_guard<std::mutex> lock(bus_lock);
+        is_lock = true;
+    }
+
     bool clear()
     {
         std::lock_guard<std::mutex> lock(bus_lock);
         return bus.empty();
     }
 
-    void submit(DBusEventData event)
+    void dump()
     {
         std::lock_guard<std::mutex> lock(bus_lock);
-        bus.push(event);
+        while (!bus.empty())
+            bus.pop();
+    }
+
+    void submit(DBusEventData event)
+    {
+        using namespace std::literals;
+        std::lock_guard<std::mutex> lock(bus_lock);
+        if (!is_lock)
+            bus.push(event);
     }
 
     const DBusEventData retrieve(DBusEventData::DBusEvent filter = DBusEventData::DBusEvent::NO_EVENT)
@@ -150,7 +156,7 @@ class DBus
         if (!bus.empty())
         {
             std::lock_guard<std::mutex> lock(bus_lock);
-            auto top = bus.front().copy();
+            auto top = bus.front();
             if (top.event == filter || filter == DBusEventData::DBusEvent::NO_EVENT)
             {
                 bus.pop();
@@ -161,6 +167,8 @@ class DBus
         return {};
     }
 };
+#define dumpBus() openttd::drivers::DBus::get()->dump();
+#define lockBus() openttd::drivers::DBus::get()->lockSubmit();
 #define newEventWithData(event, data_ptr) openttd::drivers::DBusEventData(event, data_ptr)
 #define newEvent(event) newEventWithData(event, nullptr)
 #define getEventToHandle(filter) openttd::drivers::DBus::get()->retrieve(filter)

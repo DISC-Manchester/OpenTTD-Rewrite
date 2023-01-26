@@ -1,5 +1,9 @@
 ﻿cmake_minimum_required(VERSION 3.24.0)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 if(NOT BINARY_NAME)
     set(BINARY_NAME openttd)
 endif()
@@ -17,7 +21,6 @@ endif()
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
-
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     add_definitions(-DWITH_DEBUG)
@@ -51,7 +54,4 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/src)
 add_external_library(libos)
 
 set_target_properties(openttd PROPERTIES OUTPUT_NAME "${BINARY_NAME}")
-set_property(TARGET openttd PROPERTY CMAKE_CXX_STANDARD 20)
-set_property(TARGET openttd PROPERTY CMAKE_CXX_STANDARD_REQUIRED YES)
-set_property(TARGET openttd PROPERTY CMAKE_CXX_EXTENSIONS NO)
 target_link_libraries(openttd Threads::Threads)

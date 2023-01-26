@@ -7,20 +7,29 @@
  * See the GNU General Public License for more details. You should have received a copy of the GNU General Public
  * License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
  */
-#include <array>
-#include <cassert>
-#include <chrono>
-#include <cstdint>
-#include <cstring>
-#include <memory>
-#include <mutex>
-#include <queue>
-#include <string>
-#include <thread>
-#include <tuple>
-#include <type_traits>
-#include <typeinfo>
-#include <utility>
-#include <atomic>
-#include <vector>
-typedef uint16_t unicode;
+#include "../istd/Stm.hpp"
+namespace openttd
+{
+namespace ecs
+{
+
+struct Component
+{
+  private:
+    static const uint32_t incTypeID()
+    {
+        static uint32_t component_type_id;
+        return component_type_id++;
+    }
+  public:
+    const uint32_t component_type;
+    void (*callback)();
+    Component(void (*callback_in)())
+        : component_type(incTypeID())
+        , callback(callback_in)
+    {
+    }
+    virtual ~Component() = default;
+};
+} // namespace ecs
+} // namespace openttd
