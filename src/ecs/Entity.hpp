@@ -40,7 +40,7 @@ class EntityManager
     EntityManager()
     {
         for (Entity i = 1; i < max_entities; i++)
-            entity_ids.emplace(i);
+            entity_ids.push(i);
     }
 
     std::array<EntityComponentList, max_entities> &getListOfComponents()

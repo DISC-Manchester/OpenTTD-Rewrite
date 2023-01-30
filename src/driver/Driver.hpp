@@ -81,7 +81,7 @@ class DriverRegistry
     }
 };
 
-struct DBusEventData
+struct DBusEventData : public stm::controlled_copy<DBusEventData>
 {
     enum class DBusEvent
     {
@@ -92,7 +92,7 @@ struct DBusEventData
         FINISHED_DRAW,
         PRESENT_FRAME,
     } event;
-    std::shared_ptr<void *> data;
+    void *data;
     DBusEventData()
     {
         event = DBusEvent::NO_EVENT;
@@ -101,17 +101,20 @@ struct DBusEventData
 
     DBusEventData(DBusEvent event_in, void *data_in)
         : event(event_in)
-        , data(std::make_shared<void *>(data_in))
+        , data(data_in)
     {
+    }
+
+    virtual DBusEventData copy() final override
+    {
+        return DBusEventData(*this);
     }
 };
 
 class DBus
 {
-    std::queue<DBusEventData> bus;
-    std::mutex bus_lock;
-    std::atomic_bool is_lock = false;
-
+    stm::queue<DBusEventData, 255> bus;
+    std::atomic_bool is_submition_locked = false;
   public:
     DBus() = default;
     ~DBus() = default;
@@ -124,56 +127,51 @@ class DBus
         return dbus;
     }
 
-    void lockSubmit()
-    {
-        std::lock_guard<std::mutex> lock(bus_lock);
-        is_lock = true;
-    }
-
     bool clear()
     {
-        std::lock_guard<std::mutex> lock(bus_lock);
         return bus.empty();
-    }
-
-    void dump()
-    {
-        std::lock_guard<std::mutex> lock(bus_lock);
-        while (!bus.empty())
-            bus.pop();
     }
 
     void submit(DBusEventData event)
     {
-        using namespace std::literals;
-        std::lock_guard<std::mutex> lock(bus_lock);
-        if (!is_lock)
-            bus.push(event);
+        if (is_submition_locked)
+            return;
+        bus.push(std::move(event));
+    }
+
+    void submitImportant(DBusEventData event)
+    {
+        if (is_submition_locked)
+            return;
+        if (event.event == DBusEventData::DBusEvent::CLOSED_WINDOW)
+            is_submition_locked = true;
+        bus.push(std::move(event),true);
+    }
+
+    void flushBus()
+    {
+        bus.forceFlush();
     }
 
     const DBusEventData retrieve(DBusEventData::DBusEvent filter = DBusEventData::DBusEvent::NO_EVENT)
     {
         if (!bus.empty())
         {
-            std::lock_guard<std::mutex> lock(bus_lock);
-            auto top = bus.front();
-            if (top.event == filter || filter == DBusEventData::DBusEvent::NO_EVENT)
-            {
-                bus.pop();
-                return top;
-            }
+            const openttd::drivers::DBusEventData* top = bus.front();
+            if (top->event == filter || filter == DBusEventData::DBusEvent::NO_EVENT)
+                return bus.pop();
             return {};
         }
         return {};
     }
 };
-#define dumpBus() openttd::drivers::DBus::get()->dump();
-#define lockBus() openttd::drivers::DBus::get()->lockSubmit();
+#define flushBus() openttd::drivers::DBus::get()->flushBus()
 #define newEventWithData(event, data_ptr) openttd::drivers::DBusEventData(event, data_ptr)
 #define newEvent(event) newEventWithData(event, nullptr)
 #define getEventToHandle(filter) openttd::drivers::DBus::get()->retrieve(filter)
 #define eventToHandle(filter) getEventToHandle(filter).event != openttd::drivers::DBusEventData::DBusEvent::NO_EVENT
 #define reSubmitEvent(event) openttd::drivers::DBus::get()->submit(event)
 #define submitEvent(event) openttd::drivers::DBus::get()->submit(event)
+#define submitImportantEvent(event) openttd::drivers::DBus::get()->submitImportant(event)
 } // namespace drivers
 } // namespace openttd

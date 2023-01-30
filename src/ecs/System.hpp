@@ -22,11 +22,12 @@ class ISystem
     virtual void run(EntityManager *ecs_in)
     {
         for (auto &component : ecs_in->getListOfComponents())
-            for (uint32_t i = 0; i < component.component_count; i++)
-            {
-                if (typeid(*component.component[i]) == typeid(T))
-                    component.component[i]->callback();
-            }
+            if (component.component_count != 0)
+                for (uint32_t i = 0; i < component.component_count; i++)
+                {
+                    if (typeid(*component.component[i]) == typeid(T))
+                        component.component[i]->callback(component.component[i]);
+                }
     }
 };
 } // namespace ecs

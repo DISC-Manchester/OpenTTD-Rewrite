@@ -19,7 +19,7 @@ namespace renderer
 {
 struct IRenderComponent : public openttd::ecs::Component
 {
-    IRenderComponent(void (*callback_in)())
+    IRenderComponent(void (*callback_in)(openttd::ecs::Component*))
         : openttd::ecs::Component(callback_in)
     {
     }
@@ -28,14 +28,27 @@ struct IRenderComponent : public openttd::ecs::Component
 
 class SpriteRenderComponent : public IRenderComponent
 {
-
   public:
+    const openttd::render::IBuffer* vertex_buffer;
+  
     SpriteRenderComponent(const char *)
-        : IRenderComponent([]() {})
+        : IRenderComponent(SpriteRenderComponent::run)
     {
+            const float g_vertex_buffer_data[9] = {
+                -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            };
+            vertex_buffer = openttd::render::Renderer::get()->createBuffer();
+    }
+    static void run(openttd::ecs::Component* componant)
+    {
+        openttd::render::Renderer::get()->bindBuffer(static_cast<SpriteRenderComponent*>(componant)->vertex_buffer);
+        openttd::render::Renderer::get()->draw();
     }
 
-    virtual ~SpriteRenderComponent() override = default;
+    virtual ~SpriteRenderComponent() override
+    {
+        openttd::render::Renderer::get()->destroyBuffer(vertex_buffer);
+    }
 };
 } // namespace renderer
 } // namespace ecs

@@ -244,9 +244,8 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
             system_clock::time_point end_time = system_clock::now();
             std::this_thread::sleep_for((end_time - start_time) - 16.5ms);
         }
-        dumpBus();
-        submitEvent(newEvent(DBusEventData::DBusEvent::CLOSED_WINDOW));
-        lockBus();
+        submitImportantEvent(newEvent(DBusEventData::DBusEvent::CLOSED_WINDOW));
+        flushBus();
     }
 
     void stop() override

@@ -1,3 +1,4 @@
+#include "../../render/Directx12.hpp"
 #include "LibOSDriver.hpp"
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -90,22 +91,31 @@ class LibOSDX12WindowDriver : public LibOSBaseWindowDriver
 #endif
         physical_device.Reset();
         delete native_window;
+        if (tested)
+            openttd::render::Renderer::get()->use(new openttd::render::Directx12Renderer(instance, device));
         return nullptr;
     }
 
     void mainLoop() final override
     {
+        using namespace std::chrono;
+        using namespace std::literals;
         while (losUpdateWindow(window) != LOS_WINDOW_CLOSE)
-            ;
-
-        DBusEventData data;
-        data.event = DBusEventData::DBusEvent::CLOSED_WINDOW;
-        data.data = nullptr;
-        DBus::get()->submit(data);
+        {
+            system_clock::time_point start_time = system_clock::now();
+            if (eventToHandle(drivers::DBusEventData::DBusEvent::PRESENT_FRAME))
+                openttd::render::Renderer::get()->present();
+            system_clock::time_point end_time = system_clock::now();
+            std::this_thread::sleep_for((end_time - start_time) - 16.5ms);
+        }
+        submitImportantEvent(newEvent(DBusEventData::DBusEvent::CLOSED_WINDOW));
+        flushBus();
     }
 
     void stop() final override
     {
+        if (tested)
+            openttd::render::Renderer::get()->use(nullptr);
         if (instance)
             instance.Reset();
 #if WITH_DEBUG
@@ -124,7 +134,7 @@ class LibOSDX12WindowDriver : public LibOSBaseWindowDriver
             device.Reset();
 
 #if WITH_DEBUG
-        debug->ReportLiveDeviceObjects( D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
+        debug->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
         debug.Reset();
 #endif
         LibOSBaseWindowDriver::stop();

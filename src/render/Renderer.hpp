@@ -16,6 +16,10 @@ struct ICommandList
 {
 };
 
+struct IBuffer
+{
+};
+
 class IRender
 {
   protected:
@@ -25,6 +29,10 @@ class IRender
 
   public:
     virtual void begin() = 0;
+    virtual const IBuffer *createBuffer() = 0;
+    virtual void bindBuffer(const IBuffer *buffer) = 0;
+    virtual void destroyBuffer(const IBuffer *buffer) = 0;
+    virtual void draw() = 0;
     virtual void end() = 0;
     virtual void present() = 0;
     virtual ~IRender() = default;
@@ -72,6 +80,31 @@ class Renderer
     {
         if (render_.load())
             render_.load()->end();
+    }
+
+    const IBuffer *createBuffer()
+    {
+        if (render_.load())
+            return render_.load()->createBuffer();
+        return nullptr;
+    }
+
+    void bindBuffer(const IBuffer *buffer)
+    {
+        if (render_.load())
+            return render_.load()->bindBuffer(buffer);
+    }
+
+    void destroyBuffer(const IBuffer *buffer)
+    {
+        if (render_.load())
+            render_.load()->destroyBuffer(buffer);
+    }
+
+    void draw()
+    {
+        if (render_.load())
+            render_.load()->draw();
     }
 };
 } // namespace render

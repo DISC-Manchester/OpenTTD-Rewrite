@@ -23,8 +23,8 @@ struct Component
     }
   public:
     const uint32_t component_type;
-    void (*callback)();
-    Component(void (*callback_in)())
+    void (*callback)(openttd::ecs::Component*);
+    Component(void (*callback_in)(openttd::ecs::Component*))
         : component_type(incTypeID())
         , callback(callback_in)
     {
