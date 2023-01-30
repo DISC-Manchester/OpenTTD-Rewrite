@@ -8,20 +8,20 @@
  * License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
  */
 #include "../istd/Stm.hpp"
-#include "Component.hpp"
 namespace openttd
 {
 namespace ecs
 {
+class Component;
 typedef uint32_t Entity;
 #define max_entities 5000
 #define max_components 50
 
-struct ComponentList
+struct EntityComponentList
 {
     std::array<Component *, max_components> component;
     uint32_t component_count;
-    ComponentList()
+    EntityComponentList()
     {
         component_count = 0;
         for (uint32_t i = 0; i < max_components; i++)
@@ -31,24 +31,24 @@ struct ComponentList
     }
 };
 
-class ECSManager
+class EntityManager
 {
     std::queue<Entity> entity_ids;
-    std::array<ComponentList, max_entities> entity_components{};
+    std::array<EntityComponentList, max_entities> entity_components{};
 
   public:
-    ECSManager()
+    EntityManager()
     {
         for (Entity i = 1; i < max_entities; i++)
             entity_ids.emplace(i);
     }
 
-    std::array<ComponentList, max_entities> &getListOfComponents()
+    std::array<EntityComponentList, max_entities> &getListOfComponents()
     {
         return entity_components;
     }
 
-    ~ECSManager()
+    ~EntityManager()
     {
         while (!entity_ids.empty())
             entity_ids.pop();
@@ -82,20 +82,5 @@ class ECSManager
     }
 };
 
-template<typename T>
-    requires std::is_base_of<openttd::ecs::Component, T>::value
-class ISystem
-{
-  public:
-    virtual void run(ECSManager *ecs_in)
-    {
-        for (auto &component : ecs_in->getListOfComponents())
-            for (uint32_t i = 0; i < component.component_count; i++)
-            {
-                if (typeid(*component.component[i]) == typeid(T))
-                    component.component[i]->callback();
-            }
-    }
-};
 } // namespace ecs
 } // namespace openttd

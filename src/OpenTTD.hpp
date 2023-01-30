@@ -8,26 +8,25 @@
  * License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
  */
 #include "driver/video/VideoDriver.hpp"
-#include "ecs/ECS.hpp"
-#include "ecs/RenderECS.hpp"
+#include "ecs/Systems.hpp"
 #include "istd/Stm.hpp"
 namespace openttd
 {
 static ecs::renderer::RenderSystem render_system;
-static ecs::ECSManager ecs_manager;
+static ecs::EntityManager entity_manager;
 int gameMain()
 {
     drivers::VideoDriver video{};
     (void)drivers::DriverRegistry::get(true);
-    ecs::Entity entity = ecs_manager.getNewEntity();
-    ecs_manager.addComponent(entity,new ecs::renderer::RenderComponent()); 
+    ecs::Entity entity = entity_manager.getNewEntity();
+    entity_manager.addComponent(entity, new ecs::renderer::SpriteRenderComponent(nullptr));
     bool running = true;
     while (running)
     {
         using namespace std::chrono;
         using namespace std::literals;
         system_clock::time_point start_time = system_clock::now();
-        render_system.run(&ecs_manager);
+        render_system.run(&entity_manager);
         if (eventToHandle(drivers::DBusEventData::DBusEvent::CLOSED_WINDOW))
         {
             running = false;
@@ -39,7 +38,8 @@ int gameMain()
         system_clock::time_point end_time = system_clock::now();
         std::this_thread::sleep_for((end_time - start_time) - 16.5ms);
     }
-    ecs_manager.returnEntity(entity);
+    entity_manager.returnEntity(entity);
+    (void)openttd::render::Renderer::get(true);
     return 0;
 }
 } // namespace openttd

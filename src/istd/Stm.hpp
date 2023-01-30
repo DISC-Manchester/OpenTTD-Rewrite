@@ -7,7 +7,9 @@
  * See the GNU General Public License for more details. You should have received a copy of the GNU General Public
  * License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
  */
+#include <algorithm>
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -21,6 +23,5 @@
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
-#include <atomic>
 #include <vector>
 typedef uint16_t unicode;

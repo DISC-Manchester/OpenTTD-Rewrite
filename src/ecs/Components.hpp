@@ -10,42 +10,32 @@
 #include "../istd/Stm.hpp"
 #include "../render/Renderer.hpp"
 #include "Component.hpp"
+#include "System.hpp"
 namespace openttd
 {
 namespace ecs
 {
 namespace renderer
 {
-class RenderComponent : public openttd::ecs::Component
+struct IRenderComponent : public openttd::ecs::Component
 {
-  public:
-    RenderComponent()
-        : openttd::ecs::Component([]() {
-          puts("RenderComponent Activated");
-        })
+    IRenderComponent(void (*callback_in)())
+        : openttd::ecs::Component(callback_in)
     {
     }
-
-    virtual ~RenderComponent() override = default;
+    virtual ~IRenderComponent() override = default;
 };
 
-class RenderSystem : public openttd::ecs::ISystem<RenderComponent>
+class SpriteRenderComponent : public IRenderComponent
 {
+
   public:
-    void run(ECSManager *ecs_in) final override
+    SpriteRenderComponent(const char *)
+        : IRenderComponent([]() {})
     {
-        openttd::render::Renderer::get()->begin();
-        try
-        {
-            RenderSystem::ISystem<RenderComponent>::run(ecs_in);
-        }
-        catch (const std::exception)
-        {
-            return;
-        }
-        openttd::render::Renderer::get()->end();
-        submitEvent(newEvent(openttd::drivers::DBusEventData::DBusEvent::FINISHED_DRAW));
     }
+
+    virtual ~SpriteRenderComponent() override = default;
 };
 } // namespace renderer
 } // namespace ecs

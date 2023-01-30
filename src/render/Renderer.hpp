@@ -12,8 +12,17 @@ namespace openttd
 {
 namespace render
 {
+struct ICommandList
+{
+};
+
 class IRender
 {
+  protected:
+    ICommandList *cpu_commands;
+    ICommandList *gpu_commands;
+    virtual void transfer() = 0;
+
   public:
     virtual void begin() = 0;
     virtual void end() = 0;
@@ -23,18 +32,9 @@ class IRender
 
 class Renderer
 {
-    std::atomic<openttd::render::IRender *> render_ = nullptr;
+    std::atomic<openttd::render::IRender *> render_;
+
   public:
-    Renderer()
-    {
-    }
-
-    ~Renderer()
-    {
-        delete render_;
-        render_ = nullptr;
-    }
-
     static Renderer *get(bool free_it = false)
     {
         static openttd::render::Renderer *renderer;
@@ -70,7 +70,6 @@ class Renderer
 
     void end()
     {
-
         if (render_.load())
             render_.load()->end();
     }

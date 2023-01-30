@@ -173,14 +173,16 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
         float queue_priority = 1.0f;
         queue_info.pQueuePriorities = &queue_priority;
 
+        const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
         VkPhysicalDeviceFeatures device_features{};
 
         VkDeviceCreateInfo dev_info{};
         dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         dev_info.pEnabledFeatures = &device_features;
-        dev_info.enabledExtensionCount = 0;
+        dev_info.enabledExtensionCount = deviceExtensions.size();
         dev_info.enabledLayerCount = 0;
-        dev_info.ppEnabledExtensionNames = nullptr;
+        dev_info.ppEnabledExtensionNames = deviceExtensions.data();
         dev_info.ppEnabledLayerNames = nullptr;
         dev_info.queueCreateInfoCount = 1;
         dev_info.pQueueCreateInfos = &queue_info;
@@ -225,7 +227,8 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
 #endif
         }
         if (tested)
-            openttd::render::Renderer::get()->use(new openttd::render::VulkanRenderer(instance, device, surface));
+            openttd::render::Renderer::get()->use(
+                new openttd::render::VulkanRenderer(instance, physical_device, device, surface, graphics_family));
         return nullptr;
     }
 
@@ -249,10 +252,7 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
     void stop() override
     {
         if (tested)
-        {
             openttd::render::Renderer::get()->use(nullptr);
-            (void)openttd::render::Renderer::get(true);
-        }
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
