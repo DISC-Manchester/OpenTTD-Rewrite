@@ -13,6 +13,7 @@
 #include <cassert>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <memory>
 #include <mutex>
@@ -26,6 +27,8 @@ namespace stm
 {
 #define stm_new new
 #define stm_free delete
+#define constRef(obj) const obj const &
+#define imutableInt(name, value) static constexpr stm::stmuint name = value
 typedef uint16_t unicode;
 typedef uint64_t stmuint;
 
@@ -38,8 +41,14 @@ template<typename T> struct controlled_copy
   public:
     controlled_copy() = default;
 
-    virtual T copy() = 0;
+    virtual T *copy() = 0;
 };
+
+#define controlled_copy_f(T)         \
+    virtual T *copy() final override \
+    {                                \
+        return new T(*this);         \
+    }
 
 template<typename T, stmuint max_size> struct queue
 {

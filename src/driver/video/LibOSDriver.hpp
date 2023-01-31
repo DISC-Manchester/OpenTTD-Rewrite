@@ -18,7 +18,6 @@ class LibOSBaseWindowDriver : public IVideoDriver
 {
   protected:
     losWindow window;
-
   public:
     LibOSBaseWindowDriver(int priority_in)
         : IVideoDriver(priority_in)

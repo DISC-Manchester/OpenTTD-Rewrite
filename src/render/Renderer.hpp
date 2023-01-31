@@ -12,21 +12,16 @@ namespace openttd
 {
 namespace render
 {
-struct ICommandList
+struct IBuffer : public stm::controlled_copy<IBuffer>
 {
 };
 
-struct IBuffer
-{
-};
 
-class IRender
+class IRender : public stm::controlled_copy<IRender>
 {
   protected:
-    ICommandList *cpu_commands;
-    ICommandList *gpu_commands;
     virtual void transfer() = 0;
-
+    imutableInt(max_frames,3);
   public:
     virtual void begin() = 0;
     virtual const IBuffer *createBuffer() = 0;
@@ -38,10 +33,10 @@ class IRender
     virtual ~IRender() = default;
 };
 
-class Renderer
+struct Renderer
 {
+  private:
     std::atomic<openttd::render::IRender *> render_;
-
   public:
     static Renderer *get(bool free_it = false)
     {

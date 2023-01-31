@@ -53,6 +53,7 @@ class LibOSDX12WindowDriver : public LibOSBaseWindowDriver
         if (FAILED(D3D12GetDebugInterface(IID_PPV_ARGS(debug_layers.GetAddressOf()))))
             return "failed to get Debug layers for directx";
         debug_layers->EnableDebugLayer();
+        debug_layers->SetEnableAutoName(TRUE);
         debug_layers->SetEnableSynchronizedCommandQueueValidation(TRUE);
         debug_layers.Reset();
         graphics_interface_flags |= DXGI_CREATE_FACTORY_DEBUG;

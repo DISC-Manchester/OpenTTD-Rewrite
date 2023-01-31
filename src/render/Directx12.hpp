@@ -7,37 +7,33 @@
  * See the GNU General Public License for more details. You should have received a copy of the GNU General Public
  * License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
  */
+#include "DirectX12Helpers.hpp"
 #include "Renderer.hpp"
+#include <Windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
-#include <wrl/client.h>
+
 namespace openttd
 {
 namespace render
 {
 using namespace Microsoft::WRL;
-template<bool cpu_side> class Directx12CommandList : public ICommandList
-{
-  public:
-    Directx12CommandList()
-    {
-    }
-
-    // TEMP: add a commands here
-
-    ~Directx12CommandList()
-    {
-    }
-};
-
+using namespace openttd::render::dx12helpers;
 class Directx12Buffer : public IBuffer
 {
+  public:
+    controlled_copy_f(Directx12Buffer)
 };
+
 class Directx12Renderer : public IRender
 {
-
-    ComPtr<IDXGIFactory7> &instance;
-    ComPtr<ID3D12Device10> &device;
+    constRef(ComPtr<IDXGIFactory7>) instance;
+    constRef(ComPtr<ID3D12Device10>) device;
+    ComPtr<Directx12Frame> frames[max_frames]{nullptr};
+    ComPtr<Directx12UniformManager> uniforms_manager;
+    stm::stmuint frame_index = 0;
+    stm::stmuint fence_value = 0;
+    HANDLE fence_event;
 
   protected:
     virtual void transfer() final override
@@ -45,18 +41,35 @@ class Directx12Renderer : public IRender
     }
 
   public:
-    Directx12Renderer(ComPtr<IDXGIFactory7> &instance_in, ComPtr<ID3D12Device10> &device_in)
+    controlled_copy_f(Directx12Renderer)
+        //---
+        Directx12Renderer(_In_opt_ constRef(ComPtr<IDXGIFactory7>) instance_in,
+                          _In_opt_ constRef(ComPtr<ID3D12Device10>) device_in)
         : instance(instance_in)
         , device(device_in)
     {
+        for (stm::stmuint i = 0; i < max_frames; i++)
+            frames[i] = new Directx12Frame(device);
+
+        fence_event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+
+        uniforms_manager = new Directx12UniformManager(device);
     }
 
     virtual ~Directx12Renderer() final override
     {
+        frame_index = 0;
+        for (stm::stmuint i = 0; i < max_frames; i++)
+            frames[i]->commands->wait(fence_event);
+
+        if (fence_event)
+            CloseHandle(fence_event);
     }
 
     void begin() final override
     {
+        frames[frame_index]->commands->wait(fence_event);
+        frames[frame_index]->Reset();
     }
 
     const IBuffer *createBuffer() final override
@@ -78,6 +91,15 @@ class Directx12Renderer : public IRender
 
     void end() final override
     {
+        if (FAILED(frames[frame_index]->commands->Get()->Close()))
+        {
+            std::puts("DirectX12: <ERROR> -> failed to close command list");
+        }
+        stm::stmuint &fence_value_ref = fence_value;
+        ++fence_value_ref;
+        frames[frame_index].Get()->commands->fence_value = fence_value_ref;
+        frames[frame_index]->commands->Excute(fence_value_ref);
+        frame_index = (frame_index + 1) % max_frames;
     }
 
     void present() final override

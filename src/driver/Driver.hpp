@@ -83,6 +83,7 @@ class DriverRegistry
 
 struct DBusEventData : public stm::controlled_copy<DBusEventData>
 {
+    controlled_copy_f(DBusEventData)
     enum class DBusEvent
     {
         NO_EVENT,
@@ -103,11 +104,6 @@ struct DBusEventData : public stm::controlled_copy<DBusEventData>
         : event(event_in)
         , data(data_in)
     {
-    }
-
-    virtual DBusEventData copy() final override
-    {
-        return DBusEventData(*this);
     }
 };
 
