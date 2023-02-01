@@ -16,29 +16,36 @@ static ecs::renderer::RenderSystem render_system;
 static ecs::EntityManager entity_manager;
 int gameMain()
 {
-    drivers::VideoDriver video{};
-    (void)drivers::DriverRegistry::get(true);
-    ecs::Entity entity = entity_manager.getNewEntity();
-    entity_manager.addComponent(entity, new ecs::renderer::SpriteRenderComponent(nullptr));
-    while (true)
+    try
     {
-        using namespace std::chrono;
-        using namespace std::literals;
-        system_clock::time_point start_time = system_clock::now();
-        if (eventToHandle(drivers::DBusEventData::DBusEvent::CLOSED_WINDOW))
-            break;
-        //start of game loop
+        drivers::VideoDriver video{};
+        (void)drivers::DriverRegistry::get(true);
+        ecs::Entity entity = entity_manager.getNewEntity();
+        entity_manager.addComponent(entity, new ecs::renderer::SpriteRenderComponent(nullptr));
+        while (true)
+        {
+            using namespace std::chrono;
+            using namespace std::literals;
+            system_clock::time_point start_time = system_clock::now();
+            if (eventToHandle(drivers::DBusEventData::DBusEvent::CLOSED_WINDOW))
+                break;
+            // start of game loop
 
-        render_system.run(&entity_manager);
+            render_system.run(&entity_manager);
 
-        //end the game loop
-        if (eventToHandle(drivers::DBusEventData::DBusEvent::FINISHED_DRAW))
-            submitEvent(newEvent(drivers::DBusEventData::DBusEvent::PRESENT_FRAME));
-        system_clock::time_point end_time = system_clock::now();
-        std::this_thread::sleep_for((end_time - start_time) - 16.5ms);
+            // end the game loop
+            if (eventToHandle(drivers::DBusEventData::DBusEvent::FINISHED_DRAW))
+                submitEvent(newEvent(drivers::DBusEventData::DBusEvent::PRESENT_FRAME));
+            system_clock::time_point end_time = system_clock::now();
+            std::this_thread::sleep_for((end_time - start_time) - 16.5ms);
+        }
+        entity_manager.returnEntity(entity);
+        (void)openttd::render::Renderer::get(true);
     }
-    entity_manager.returnEntity(entity);
-    (void)openttd::render::Renderer::get(true);
+    catch(stm::exception e)
+    {
+        stm::printf("GAME EXSEPTION OCCORED -> %s", e.what());
+    }
     return 0;
 }
 } // namespace openttd

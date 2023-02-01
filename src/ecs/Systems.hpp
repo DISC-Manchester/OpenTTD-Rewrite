@@ -30,7 +30,6 @@ class RenderSystem : public openttd::ecs::ISystem<IRenderComponent>
         }
         catch (const std::exception)
         {
-            return;
         }
         openttd::render::Renderer::get()->end();
         submitEvent(newEvent(openttd::drivers::DBusEventData::DBusEvent::FINISHED_DRAW));

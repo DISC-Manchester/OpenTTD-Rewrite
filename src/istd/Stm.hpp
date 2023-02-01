@@ -25,12 +25,19 @@
 #include <utility>
 namespace stm
 {
+    using namespace std;
 #define stm_new new
 #define stm_free delete
-#define constRef(obj) const obj const &
 #define imutableInt(name, value) static constexpr stm::stmuint name = value
 typedef uint16_t unicode;
 typedef uint64_t stmuint;
+
+struct not_copyable
+{
+    not_copyable &operator=(const not_copyable &) = delete;
+    not_copyable(const not_copyable &) = delete;
+    not_copyable() = default;
+};
 
 template<typename T> struct controlled_copy
 {

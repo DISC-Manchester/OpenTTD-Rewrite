@@ -16,12 +16,12 @@ struct IBuffer : public stm::controlled_copy<IBuffer>
 {
 };
 
-
-class IRender : public stm::controlled_copy<IRender>
+class IRender : public stm::not_copyable
 {
   protected:
     virtual void transfer() = 0;
-    imutableInt(max_frames,3);
+    imutableInt(max_frames, 3);
+
   public:
     virtual void begin() = 0;
     virtual const IBuffer *createBuffer() = 0;
@@ -33,16 +33,51 @@ class IRender : public stm::controlled_copy<IRender>
     virtual ~IRender() = default;
 };
 
+class NullRender : public IRender
+{
+  protected:
+    virtual void transfer() override{};
+
+  public:
+    virtual void begin() override{};
+    virtual const IBuffer *createBuffer() override
+    {
+        return nullptr;
+    };
+    virtual void bindBuffer(const IBuffer *) override{};
+    virtual void destroyBuffer(const IBuffer *) override{};
+    virtual void draw() override{};
+    virtual void end() override{};
+    virtual void present() override{};
+    virtual ~NullRender() override = default;
+};
+
 struct Renderer
 {
   private:
-    std::atomic<openttd::render::IRender *> render_;
+    stm::atomic<openttd::render::IRender *> render_ = new NullRender();
+    stm::mutex use_lock;
+    stm::thread::id last_thread_to_lock;
+
+    void trackLock()
+    {
+        use_lock.lock();
+        last_thread_to_lock = stm::this_thread::get_id();
+    }
+
+    bool isUseable()
+    {
+        return render_.load();
+    }
+
   public:
+
     static Renderer *get(bool free_it = false)
     {
         static openttd::render::Renderer *renderer;
         if (free_it)
         {
+            renderer->tryUnlock();
             delete renderer;
             renderer = new openttd::render::Renderer();
             return renderer;
@@ -52,53 +87,75 @@ struct Renderer
             renderer = new openttd::render::Renderer();
         return renderer;
     }
-    void use(openttd::render::IRender *render_in)
+
+    void tryUnlock()
     {
+        if (last_thread_to_lock == stm::this_thread::get_id())
+            use_lock.unlock();
+    }
+
+    void set(openttd::render::IRender *render_in)
+    {
+        trackLock();
         if (render_)
             delete render_;
         render_ = render_in;
+        tryUnlock();
+    }
+
+    void reset()
+    {
+        trackLock();
+        if (render_)
+            delete render_;
+        render_ = new NullRender();
+        tryUnlock();
     }
 
     void begin()
     {
-        if (render_.load())
+        trackLock();
+        if (isUseable())
             render_.load()->begin();
     }
 
     void present()
     {
-        if (render_.load())
+        trackLock();
+        if (isUseable())
             render_.load()->present();
+        tryUnlock();
     }
 
     void end()
     {
-        if (render_.load())
+        if (isUseable())
             render_.load()->end();
+        tryUnlock();
     }
 
     const IBuffer *createBuffer()
     {
-        if (render_.load())
+        if (isUseable())
             return render_.load()->createBuffer();
         return nullptr;
     }
 
     void bindBuffer(const IBuffer *buffer)
     {
-        if (render_.load())
+        if (isUseable())
             return render_.load()->bindBuffer(buffer);
     }
 
     void destroyBuffer(const IBuffer *buffer)
     {
-        if (render_.load())
+        if (isUseable())
             render_.load()->destroyBuffer(buffer);
     }
 
     void draw()
     {
-        if (render_.load())
+        if (isUseable())
             render_.load()->draw();
     }
 };

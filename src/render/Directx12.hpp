@@ -27,33 +27,32 @@ class Directx12Buffer : public IBuffer
 
 class Directx12Renderer : public IRender
 {
-    constRef(ComPtr<IDXGIFactory7>) instance;
-    constRef(ComPtr<ID3D12Device10>) device;
-    ComPtr<Directx12Frame> frames[max_frames]{nullptr};
-    ComPtr<Directx12UniformManager> uniforms_manager;
+    const ComPtr<IDXGIFactory7>  instance;
+    const ComPtr<ID3D12Device10>  device;
+    stm::unique_ptr<Directx12Frame> frames[max_frames]{nullptr};
+    stm::unique_ptr<Directx12UniformManager> uniforms_manager;
     stm::stmuint frame_index = 0;
     stm::stmuint fence_value = 0;
     HANDLE fence_event;
-
+    bool render_ready = false;
   protected:
     virtual void transfer() final override
     {
     }
 
   public:
-    controlled_copy_f(Directx12Renderer)
         //---
-        Directx12Renderer(_In_opt_ constRef(ComPtr<IDXGIFactory7>) instance_in,
-                          _In_opt_ constRef(ComPtr<ID3D12Device10>) device_in)
+        Directx12Renderer(_In_opt_ const ComPtr<IDXGIFactory7>  instance_in,
+                      _In_opt_ const ComPtr<ID3D12Device10> device_in)
         : instance(instance_in)
         , device(device_in)
     {
         for (stm::stmuint i = 0; i < max_frames; i++)
-            frames[i] = new Directx12Frame(device);
+            frames[i] = stm::make_unique<Directx12Frame>(device);
 
         fence_event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 
-        uniforms_manager = new Directx12UniformManager(device);
+        uniforms_manager = stm::make_unique <Directx12UniformManager>(device);
     }
 
     virtual ~Directx12Renderer() final override
@@ -64,6 +63,8 @@ class Directx12Renderer : public IRender
 
         if (fence_event)
             CloseHandle(fence_event);
+
+        openttd::render::Renderer::get()->tryUnlock();
     }
 
     void begin() final override
@@ -91,13 +92,13 @@ class Directx12Renderer : public IRender
 
     void end() final override
     {
-        if (FAILED(frames[frame_index]->commands->Get()->Close()))
+        if (FAILED(frames[frame_index]->commands->Close()))
         {
             std::puts("DirectX12: <ERROR> -> failed to close command list");
         }
         stm::stmuint &fence_value_ref = fence_value;
         ++fence_value_ref;
-        frames[frame_index].Get()->commands->fence_value = fence_value_ref;
+        frames[frame_index]->commands->fence_value = fence_value_ref;
         frames[frame_index]->commands->Excute(fence_value_ref);
         frame_index = (frame_index + 1) % max_frames;
     }

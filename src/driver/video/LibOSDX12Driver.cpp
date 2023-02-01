@@ -93,7 +93,7 @@ class LibOSDX12WindowDriver : public LibOSBaseWindowDriver
         physical_device.Reset();
         delete native_window;
         if (tested)
-            openttd::render::Renderer::get()->use(new openttd::render::Directx12Renderer(instance, device));
+            openttd::render::Renderer::get()->set(new openttd::render::Directx12Renderer(instance, device));
         return nullptr;
     }
 
@@ -116,7 +116,7 @@ class LibOSDX12WindowDriver : public LibOSBaseWindowDriver
     void stop() final override
     {
         if (tested)
-            openttd::render::Renderer::get()->use(nullptr);
+            openttd::render::Renderer::get()->reset();
         if (instance)
             instance.Reset();
 #if WITH_DEBUG
