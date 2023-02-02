@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <math.h>
 #include <memory>
 #include <mutex>
 #include <queue>

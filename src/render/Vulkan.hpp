@@ -7,31 +7,20 @@
  * See the GNU General Public License for more details. You should have received a copy of the GNU General Public
  * License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
  */
+#include "VulkanHelpers.hpp"
 #include "Renderer.hpp"
 #include <vulkan/vulkan_core.h>
 namespace openttd
 {
 namespace render
 {
-template<bool cpu_side>
-class VulkanCommandList : public ICommandList
+using namespace openttd::render::vulkanhelpers;
+class VulkanBuffer : public IBuffer
 {
-    VkDevice &device;
-    VkCommandPool pool;
-    VkCommandBuffer buffer;
-
   public:
-    VulkanCommandList(VkDevice &device_in)
-        : device(device_in)
-    {
-    }
-
-    // TEMP: add a commands here
-
-    ~VulkanCommandList()
-    {
-    }
+    controlled_copy_f(VulkanBuffer)
 };
+
 class VulkanRenderer : public IRender
 {
     VkInstance &instance;
@@ -42,12 +31,11 @@ class VulkanRenderer : public IRender
     VkQueue draw_queue;
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     VkFormat swapchain_format;
-    std::vector<VkImage> swapchain_images;
-    std::vector<VkImageView> swapchain_image_views;
+    stm::vector<VkImage> swapchain_images;
+    stm::vector<VkImageView> swapchain_image_views;
     bool separate_present_index = false;
     uint32_t present_family_index = 0;
     uint32_t graphics_family_index = 0;
-    std::mutex gpu_control;
 
   protected:
     virtual void transfer() final override
@@ -72,7 +60,7 @@ class VulkanRenderer : public IRender
         {
             uint32_t count;
             vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &count, nullptr);
-            std::vector<VkSurfaceFormatKHR> formats(count);
+            stm::vector<VkSurfaceFormatKHR> formats(count);
             vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &count, formats.data());
 
             if (count == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
@@ -101,7 +89,7 @@ class VulkanRenderer : public IRender
         swapchain_create_info.imageColorSpace = surface_format.colorSpace;
         VkSurfaceCapabilitiesKHR capabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &capabilities);
-        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+        if (capabilities.currentExtent.width != stm::numeric_limits<uint32_t>::max())
         {
             swapchain_create_info.imageExtent = capabilities.currentExtent;
         }
@@ -113,9 +101,9 @@ class VulkanRenderer : public IRender
             VkExtent2D actualExtent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 
             actualExtent.width =
-                std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+                stm::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
             actualExtent.height =
-                std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+                stm::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
             swapchain_create_info.imageExtent = actualExtent;
         }
@@ -137,7 +125,7 @@ class VulkanRenderer : public IRender
         {
             uint32_t present_mode_count;
             vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, nullptr);
-            std::vector<VkPresentModeKHR> present_modes(present_mode_count);
+            stm::vector<VkPresentModeKHR> present_modes(present_mode_count);
             vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count,
                                                       present_modes.data());
 
@@ -218,7 +206,7 @@ class VulkanRenderer : public IRender
     {
         uint32_t count = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, nullptr);
-        std::vector<VkQueueFamilyProperties> queues(count);
+        stm::vector<VkQueueFamilyProperties> queues(count);
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, queues.data());
         int i = 0;
         for (const auto &queue : queues)
@@ -256,8 +244,23 @@ class VulkanRenderer : public IRender
 
     void begin() final override
     {
-        if (!cpu_commands)
-            cpu_commands = new VulkanCommandList<true>(device);
+    }
+
+    const IBuffer *createBuffer() final override
+    {
+        return nullptr;
+    }
+
+    void bindBuffer(const IBuffer *) final override
+    {
+    }
+
+    void destroyBuffer(const IBuffer *) final override
+    {
+    }
+
+    void draw() final override
+    {
     }
 
     void end() final override
@@ -265,16 +268,12 @@ class VulkanRenderer : public IRender
 
         // transfer command list ownership
         {
-            std::lock_guard<std::mutex> lock(gpu_control);
             vkQueueWaitIdle(draw_queue);
         }
     }
 
     void present() final override
     {
-        if (!gpu_commands)
-            gpu_commands = new VulkanCommandList<true>(device);
-        std::lock_guard<std::mutex> lock(gpu_control);
         iPresent();
     }
 };

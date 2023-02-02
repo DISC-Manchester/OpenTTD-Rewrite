@@ -27,23 +27,23 @@ class Directx12Buffer : public IBuffer
 
 class Directx12Renderer : public IRender
 {
-    const ComPtr<IDXGIFactory7>  instance;
-    const ComPtr<ID3D12Device10>  device;
+    const ComPtr<IDXGIFactory7> instance;
+    const ComPtr<ID3D12Device10> device;
     stm::unique_ptr<Directx12Frame> frames[max_frames]{nullptr};
     stm::unique_ptr<Directx12UniformManager> uniforms_manager;
     stm::stmuint frame_index = 0;
     stm::stmuint fence_value = 0;
     HANDLE fence_event;
     bool render_ready = false;
+
   protected:
     virtual void transfer() final override
     {
     }
 
   public:
-        //---
-        Directx12Renderer(_In_opt_ const ComPtr<IDXGIFactory7>  instance_in,
-                      _In_opt_ const ComPtr<ID3D12Device10> device_in)
+    //---
+    Directx12Renderer(_In_opt_ const ComPtr<IDXGIFactory7> instance_in, _In_opt_ const ComPtr<ID3D12Device10> device_in)
         : instance(instance_in)
         , device(device_in)
     {
@@ -52,7 +52,7 @@ class Directx12Renderer : public IRender
 
         fence_event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 
-        uniforms_manager = stm::make_unique <Directx12UniformManager>(device);
+        uniforms_manager = stm::make_unique<Directx12UniformManager>(device);
     }
 
     virtual ~Directx12Renderer() final override

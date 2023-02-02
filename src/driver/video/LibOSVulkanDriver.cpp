@@ -32,13 +32,13 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
         vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
         if (deviceCount == 0)
         {
-            throw std::runtime_error("No physical devices with Vulkan support found");
+            throw stm::runtime_error("No physical devices with Vulkan support found");
         }
 
-        std::vector<VkPhysicalDevice> devices(deviceCount);
+        stm::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-        VkPhysicalDevice bestDevice = VK_NULL_HANDLE;
+        VkPhysicalDevice bestmevice = VK_NULL_HANDLE;
         int bestScore = -1;
         for (const VkPhysicalDevice &device : devices)
         {
@@ -84,7 +84,7 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
             // Check for suitable queue families
             uint32_t queueFamilyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-            std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+            stm::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
             vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
             for (const VkQueueFamilyProperties &queueFamily : queueFamilies)
             {
@@ -96,17 +96,17 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
 
             if (score > bestScore)
             {
-                bestDevice = device;
+                bestmevice = device;
                 bestScore = score;
             }
         }
 
-        if (bestDevice == VK_NULL_HANDLE)
+        if (bestmevice == VK_NULL_HANDLE)
         {
-            throw std::runtime_error("No suitable device found");
+            throw stm::runtime_error("No suitable device found");
         }
 
-        return bestDevice;
+        return bestmevice;
     }
 
   public:
@@ -128,8 +128,8 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
         app_info.pEngineName = "OpenTTD Integrated Engine";
         app_info.pApplicationName = "OpenTTD";
 
-        const std::vector<const char *> validation_layers = {"VK_LAYER_KHRONOS_validation"};
-        const std::vector<const char *> instance_enable_extendions = {
+        const stm::vector<const char *> validation_layers = {"VK_LAYER_KHRONOS_validation"};
+        const stm::vector<const char *> instance_enable_extendions = {
             VK_KHR_SURFACE_EXTENSION_NAME,
 #if __has_include(<wayland-client.h>)
             VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
@@ -154,7 +154,7 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queueFamilyCount, nullptr);
 
-        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        stm::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queueFamilyCount, queueFamilies.data());
 
         uint32_t i = 0;
@@ -173,7 +173,7 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
         float queue_priority = 1.0f;
         queue_info.pQueuePriorities = &queue_priority;
 
-        const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+        const stm::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
         VkPhysicalDeviceFeatures device_features{};
 
@@ -198,7 +198,7 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
         switch (losWhatApiIsWindowUsed(window))
         {
         case WIN32_API:
-            throw new std::runtime_error("Vulkan wsi is not implemented on Windows");
+            throw new stm::runtime_error("Vulkan wsi is not implemented on Windows");
 #if __has_include(<wayland-client.h>)
         case WAYLAND_API: {
             losWindowWayland *native_link = (losWindowWayland *)losGetWindowNativePointer(window);
@@ -227,22 +227,22 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
 #endif
         }
         if (tested)
-            openttd::render::Renderer::get()->use(
+            openttd::render::Renderer::get()->set(
                 new openttd::render::VulkanRenderer(instance, physical_device, device, surface, graphics_family));
         return nullptr;
     }
 
     void mainLoop() final override
     {
-        using namespace std::chrono;
-        using namespace std::literals;
+        using namespace stm::chrono;
+        using namespace stm::literals;
         while (losUpdateWindow(window) != LOS_WINDOW_CLOSE)
         {
             system_clock::time_point start_time = system_clock::now();
             if (eventToHandle(drivers::DBusEventData::DBusEvent::PRESENT_FRAME))
                 openttd::render::Renderer::get()->present();
             system_clock::time_point end_time = system_clock::now();
-            std::this_thread::sleep_for((end_time - start_time) - 16.5ms);
+            stm::this_thread::sleep_for((end_time - start_time) - 16.5ms);
         }
         submitImportantEvent(newEvent(DBusEventData::DBusEvent::CLOSED_WINDOW));
         flushBus();
@@ -251,7 +251,7 @@ class LibOSVulkanWindowDriver : public LibOSBaseWindowDriver
     void stop() override
     {
         if (tested)
-            openttd::render::Renderer::get()->use(nullptr);
+            openttd::render::Renderer::get()->reset();
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
