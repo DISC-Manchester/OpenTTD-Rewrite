@@ -91,9 +91,10 @@ class LibOSDX12WindowDriver : public LibOSBaseWindowDriver
         queue_info.Reset();
 #endif
         physical_device.Reset();
-        delete native_window;
+        
         if (tested)
-            openttd::render::Renderer::get()->set(new openttd::render::Directx12Renderer(instance, device));
+            openttd::render::Renderer::get()->set(new openttd::render::Directx12Renderer(new openttd::render::DX12Window(500,500,native_window->window),instance, device));
+        delete native_window;
         return nullptr;
     }
 

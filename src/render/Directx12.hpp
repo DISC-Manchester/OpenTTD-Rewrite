@@ -19,6 +19,27 @@ namespace render
 {
 using namespace Microsoft::WRL;
 using namespace openttd::render::dx12helpers;
+
+struct DX12Window : public stm::controlled_copy<DX12Window>
+{
+    const uint32_t width;
+    const uint32_t height;
+    const void *ptr;
+
+    explicit DX12Window(const uint32_t width_in, const uint32_t height_in, const void *ptr_in)
+        : width(width_in)
+        , height(height_in)
+        , ptr(ptr_in)
+    {
+    }
+
+    controlled_copy_f(DX12Window)
+
+        ~DX12Window()
+    {
+    }
+};
+
 class Directx12Buffer : public IBuffer
 {
   public:
@@ -30,6 +51,7 @@ class Directx12Renderer : public IRender
     const ComPtr<IDXGIFactory7> instance;
     const ComPtr<ID3D12Device10> device;
     stm::unique_ptr<Directx12Frame> frames[max_frames]{nullptr};
+    stm::unique_ptr<Directx12Frame> window_frame{nullptr};
     stm::unique_ptr<Directx12UniformManager> uniforms_manager;
     stm::stmuint frame_index = 0;
     stm::stmuint fence_value = 0;
@@ -43,16 +65,37 @@ class Directx12Renderer : public IRender
 
   public:
     //---
-    Directx12Renderer(_In_opt_ const ComPtr<IDXGIFactory7> instance_in, _In_opt_ const ComPtr<ID3D12Device10> device_in)
+    Directx12Renderer(_In_opt_ const ComPtr<IDXGIFactory7> instance_in, _In_opt_ const DX12Window *window,
+                      _In_opt_ const ComPtr<ID3D12Device10> device_in, bool win32 = true)
         : instance(instance_in)
         , device(device_in)
     {
         for (stm::stmuint i = 0; i < max_frames; i++)
             frames[i] = stm::make_unique<Directx12Frame>(device);
 
+        window_frame = stm::make_unique<Directx12Frame>(device);
         fence_event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 
         uniforms_manager = stm::make_unique<Directx12UniformManager>(device);
+
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+        swapChainDesc.BufferCount = max_frames;
+        swapChainDesc.Width = window->width;
+        swapChainDesc.Height = window->height;
+        swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        swapChainDesc.SampleDesc.Count = 1;
+
+        ComPtr<IDXGISwapChain1> swapChain;
+        if (win32)
+        {
+            if (instance->CreateSwapChainForHwnd(window_frame->frame_allocator.Get(), (HWND)window->ptr, &swapChainDesc,
+                                                 nullptr, nullptr, &swapChain))
+            {
+                stm::puts("DX12 <ERROR> -> failed to create swapchain");
+            }
+        }
     }
 
     virtual ~Directx12Renderer() final override
@@ -61,6 +104,7 @@ class Directx12Renderer : public IRender
         for (stm::stmuint i = 0; i < max_frames; i++)
             frames[i]->commands->wait(fence_event);
 
+        window_frame->commands->wait(fence_event);
         if (fence_event)
             CloseHandle(fence_event);
 
